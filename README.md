@@ -1,7 +1,6 @@
 # AIMAS Recommendation Service
 
-```markdown
-# AIMAS Recommendation Service
+## Description
 
 A microservice within the **AIMAS (AI-based Incident Management and Alert System)** ecosystem.
 
@@ -10,7 +9,7 @@ This service listens for live system metrics published by the **Log Management**
 ---
 
 ## Overview
-
+```
 Prometheus → Log Management → [RabbitMQ: logs]
 ↓
 AIMAS Recommendation Service
