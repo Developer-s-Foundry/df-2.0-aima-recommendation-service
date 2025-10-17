@@ -1,0 +1,9 @@
+.venv
+__pycache__
+*.pyc
+alembic
+app
+alembic.ini
+log_producer.py 
+prometheus_client.py
+scheduler.py
