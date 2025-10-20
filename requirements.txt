@@ -2,3 +2,4 @@ fastapi
 uvicorn
 pika
 python-dotenv
+openai
