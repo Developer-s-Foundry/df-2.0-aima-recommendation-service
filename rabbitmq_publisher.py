@@ -11,7 +11,7 @@ def publish_recommendation(payload: dict):
         params = pika.URLParameters(RABBIT_URL)
         conn = pika.BlockingConnection(params)
         ch = conn.channel()
-        ch.exchange_declare(exchange=RECO_EXCHANGE, exchange_type="fanout", durable=True)
+        ch.exchange_declare(exchange=RECO_EXCHANGE, exchange_type="topic", durable=True)
         ch.basic_publish(
             exchange=RECO_EXCHANGE,
             routing_key="",
