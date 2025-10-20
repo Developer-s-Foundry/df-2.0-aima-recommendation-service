@@ -7,3 +7,5 @@ alembic.ini
 log_producer.py 
 prometheus_client.py
 scheduler.py
+test_event_publisher.py
+test_rabbit_connection.py
