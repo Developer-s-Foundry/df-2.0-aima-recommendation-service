@@ -1,21 +1,12 @@
 # app.py
-from fastapi import FastAPI
-from prometheus_client import query_prometheus
-from reco_rules import analyze_cpu, analyze_memory, analyze_disk
-
-# app = FastAPI(title="AIMAS Recommendation Service")
-
-
 import os
 import time
+import pika
 from typing import Optional
-
 from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
-
-# Optional: only used for readiness check when RABBIT_URL is set
-import pika
+from prometheus_client import query_prometheus
 
 load_dotenv()
 
@@ -103,44 +94,3 @@ def ready():
                 "error": repr(e)
             },
         )
-
-
-@app.get("/recommend/system")
-def recommend_system():
-    """
-    Collect CPU, Memory, and Disk metrics → Return combined recommendations.
-    """
-    # --- CPU ---
-    cpu_query = 'avg(rate(windows_cpu_time_total{mode!="idle"}[5m])) * 100'
-    cpu_result = query_prometheus(cpu_query)
-    cpu_values = [float(r["value"][1]) for r in cpu_result if "value" in r]
-    cpu_recos = analyze_cpu(cpu_values)
-
-    # --- Memory ---
-    mem_total_query = 'windows_os_physical_memory_bytes / 1024 / 1024 / 1024'
-    mem_free_query = 'windows_memory_available_bytes / 1024 / 1024 / 1024'
-
-    mem_total = query_prometheus(mem_total_query)
-    mem_free = query_prometheus(mem_free_query)
-
-    mem_total_gb = float(mem_total[0]["value"][1]) if mem_total else None
-    mem_free_gb = float(mem_free[0]["value"][1]) if mem_free else None
-    mem_recos = analyze_memory(mem_total_gb, mem_free_gb)
-
-    # --- Disk ---
-    disk_total_query = 'windows_logical_disk_size_bytes{volume="C:"} / 1024 / 1024 / 1024'
-    disk_free_query = 'windows_logical_disk_free_bytes{volume="C:"} / 1024 / 1024 / 1024'
-
-    disk_total = query_prometheus(disk_total_query)
-    disk_free = query_prometheus(disk_free_query)
-
-    disk_total_gb = float(disk_total[0]["value"][1]) if disk_total else None
-    disk_free_gb = float(disk_free[0]["value"][1]) if disk_free else None
-    disk_recos = analyze_disk(disk_total_gb, disk_free_gb, "C:")
-
-    return {
-        "cpu_usage_samples": cpu_values,
-        "memory": {"total_gb": mem_total_gb, "free_gb": mem_free_gb},
-        "disk": {"total_gb": disk_total_gb, "free_gb": disk_free_gb},
-        "recommendations": cpu_recos + mem_recos + disk_recos
-    }
