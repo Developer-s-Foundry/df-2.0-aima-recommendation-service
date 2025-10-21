@@ -37,8 +37,7 @@ Prometheus → Log Management → [RabbitMQ Exchange: logs]
 ```
 aima-recommendation-service/
 ├── app.py                  # FastAPI app (health endpoints)
-├── consumer.py             # Rule-based recommendation worker
-├── consumer_llm.py         # OpenAI-powered LLM recommendation worker
+├── consumer.py             # Rule & OpenAI-based recommendation worker
 ├── rabbitmq_publisher.py   # Shared publisher utility
 ├── rules/                  # Modular rule packs (CPU, network, etc.)
 ├── .env                    # Environment configuration
