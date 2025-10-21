@@ -12,8 +12,7 @@ This service listens to live system or application metrics published by the **Lo
 Prometheus → Log Management → [RabbitMQ Exchange: logs]
                      ↓
          AIMAS Recommendation Service
-   ├─ consumer.py      → rule-based analysis
-   └─ consumer_llm.py  → AI/LLM-driven analysis
+   ├─ consumer.py      → rule-based & AI/LLM-driven analysis
                      ↓
          [RabbitMQ Exchange: recommendations]
                      ↓
