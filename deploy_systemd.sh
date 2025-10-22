@@ -26,7 +26,7 @@ set -euo pipefail
 
 WITH_NGINX=false
 APP_PORT=8080
-DEPLOY_USER="aimas"
+DEPLOY_USER="ubuntu"
 REPO_DIR="/home/${DEPLOY_USER}/df-2.0-aima-recommendation-service"
 
 while [[ $# -gt 0 ]]; do
