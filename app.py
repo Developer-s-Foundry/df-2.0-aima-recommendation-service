@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from prometheus_client import query_prometheus
+#from prometheus_client import query_prometheus
 
 load_dotenv()
 
