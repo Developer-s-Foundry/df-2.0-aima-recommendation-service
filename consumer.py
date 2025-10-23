@@ -1,7 +1,12 @@
 # consumer.py
-import json, os, time, traceback
+import os
+import time
+import json
+import traceback
 import pika
 from dotenv import load_dotenv
+from storage import init_db, store_recommendation
+
 
 # Rule packs (deterministic)
 from rules.cpu_rules import CPURulePack
@@ -33,7 +38,7 @@ LOG_QUEUE = os.getenv("RABBIT_LOG_QUEUE", "reco.logs")
 # If topic: which routing keys to bind (comma-separated). Defaults cover your current rule packs.
 LOG_BINDINGS = os.getenv(
     "RABBIT_LOG_BINDINGS",
-    "system.* , api.payment , service.* , net.*"
+    "system.*, api.payment, service.*, net.*"
 )
 
 # OUTPUT side (recommendations)
@@ -243,6 +248,7 @@ def process_message(ch, method, properties, body):
             }
 
             publish_recommendation(payload)
+            store_recommendation(payload)
             print(f"\n🧠 [{et}] → LLM recommendations published.")
             print(reco_text or "(empty LLM response)")
         else:
@@ -258,6 +264,7 @@ def process_message(ch, method, properties, body):
             }
 
             publish_recommendation(payload)
+            store_recommendation(payload)
             print(f"\n🕒 {ts} | processed event [{et}] → {len(recos)} recommendation(s):")
             for r in recos:
                 print("   →", r)
@@ -309,4 +316,5 @@ def start_consumer():
         conn.close()
 
 if __name__ == "__main__":
+    init_db()
     start_consumer()
