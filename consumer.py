@@ -13,6 +13,7 @@ from rules.cpu_rules import CPURulePack
 from rules.disk_rules import DiskRulePack
 from rules.memory_rules import MemoryRulePack
 from rules.payment_rules import PaymentAPIRulePack
+from rules.system_net_rules import SystemNetRulePack
 from rules.error_rate_rules import ServiceErrorRateRulePack
 from rules.network_http_rules import NetworkHttpRulePack
 from rules.generic_rules import GenericRulePack
@@ -66,6 +67,7 @@ SPECIFIC_RULES = [
     CPURulePack(),
     MemoryRulePack(),
     DiskRulePack(),
+    SystemNetRulePack(),
     PaymentAPIRulePack(),
     ServiceErrorRateRulePack(),
     NetworkHttpRulePack(),
