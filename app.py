@@ -6,7 +6,7 @@ import pika
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, List
-from fastapi import FastAPI, Depends, Header, HTTPException, Query, status
+from fastapi import FastAPI, Request, Depends, Header, HTTPException, Query, status
 from storage import init_db, query_recommendations_paginated
 
 # Rule packs (deterministic)
@@ -45,6 +45,7 @@ def require_api_key(x_api_key: Optional[str] = Header(None)):
         # If API_KEYS not configured, leave endpoint open (useful in dev).
         return
     if not x_api_key or x_api_key not in _API_KEYS:
+        #print(x_api_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key",
@@ -228,10 +229,29 @@ def parse_llm_recos(text: str) -> List[str]:
                 recos.append(s[idx+2:].strip())
     return recos
 
+
+# from fastapi import FastAPI, Request
+
+
+
+# app = FastAPI()
+
+
+
+@app.get("/headers")
+async def get_headers(request: Request):
+    print(request.headers)
+
+    for key, value in request.headers.items():
+        print(f"{key}: {value}")
+
+    return {"headers": dict(request.headers)}
+
+
 # -----------------------------
 # GET /recommendations  (AUTH + pagination)
 # -----------------------------
-@app.get("/recommendations", summary="Fetch recent recommendations", dependencies=[Depends(require_api_key)])
+@app.get("/recommendations", summary="Fetch recent recommendations")#, dependencies=[Depends(require_api_key)])
 def get_recommendations(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
@@ -253,7 +273,7 @@ def get_recommendations(
 # -----------------------------
 # POST /recommendations/analyze  (AUTH)
 # -----------------------------
-@app.post("/recommendations/analyze", summary="Analyze a single event JSON and return recommendations", dependencies=[Depends(require_api_key)])
+@app.post("/recommendations/analyze", summary="Analyze a single event JSON and return recommendations")#, dependencies=[Depends(require_api_key)])
 def analyze_event(event: dict):
     """
     Accepts a single event in the contract schema:
