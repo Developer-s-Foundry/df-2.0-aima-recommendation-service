@@ -3,6 +3,8 @@ import os
 import json
 import time
 import pika
+import hmac # added 1
+import hashlib # added 2
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, List
@@ -21,7 +23,7 @@ from rules.generic_rules import GenericRulePack
 
 load_dotenv()
 
-SERVICE_NAME = "aimas-recommendation"
+SERVICE_NAME = "recommendation-service"
 VERSION = os.getenv("SERVICE_VERSION", "0.1.0")
 RABBIT_URL: Optional[str] = os.getenv("RABBIT_URL")  # e.g. amqps://user:pass@host:5671/%2Fvhost
 
@@ -35,21 +37,119 @@ async def startup_event():
     init_db()
 
 # -----------------------------
-# Auth (API Key)
+# Auth (Gateway Signature)
 # -----------------------------
-_API_KEYS = [k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip()]
+# We treat this as the shared secret between the API Gateway and this service.
+# Prefer GATEWAY_SECRET_KEY, but fall back to API_KEYS[0] for backwards compatibility.
+GATEWAY_SECRET_KEY = os.getenv("GATEWAY_SECRET_KEY", "").strip()
 
-def require_api_key(x_api_key: Optional[str] = Header(None)):
-    # Health endpoints are deliberately left open (no dependency there).
-    if not _API_KEYS:
-        # If API_KEYS not configured, leave endpoint open (useful in dev).
-        return
-    if not x_api_key or x_api_key not in _API_KEYS:
-        #print(x_api_key)
+if not GATEWAY_SECRET_KEY:
+    _API_KEYS_RAW = os.getenv("API_KEYS", "")
+    if _API_KEYS_RAW:
+        GATEWAY_SECRET_KEY = _API_KEYS_RAW.split(",")[0].strip()
+
+
+def _compute_gateway_signature(
+    secret: str,
+    method: str,
+    path: str,
+    user_id: str,
+    timestamp: str,
+    service_name: str,
+) -> str:
+    """
+    Example signature scheme: HMAC-SHA256 over a canonical string.
+
+    Adjust this to match whatever your API Gateway actually does.
+    """
+    payload = "\n".join([method.upper(), path, user_id, timestamp, service_name])
+    return hmac.new(
+        secret.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+async def require_gateway_auth(
+    request: Request,
+    x_gateway_signature: Optional[str] = Header(None, alias="X-Gateway-Signature"),
+    x_gateway_timestamp: Optional[str] = Header(None, alias="X-Gateway-Timestamp"),
+    z_gateway_timestamp: Optional[str] = Header(None, alias="Z-Gateway-Timestamp"),
+    x_service_name: Optional[str] = Header(None, alias="X-Service-Name"),
+    x_request_id: Optional[str] = Header(None, alias="X-Request-Id"),  # optional for now
+    x_user_id: Optional[str] = Header(None, alias="X-User-Id"),        # optional, not in HMAC
+):
+    """
+    Dependency that verifies that the request really came through the API Gateway.
+
+    - Uses GATEWAY_SECRET_KEY (or first API_KEYS entry) as the shared secret.
+    - Verifies presence of required headers.
+    - Validates timestamp freshness.
+    - Recomputes and checks the HMAC signature.
+    """
+
+    # If no secret is configured, leave endpoints open (dev mode).
+    if not GATEWAY_SECRET_KEY:
+        #return
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Gateway secret not configured on server",
+        )
+
+    x_gateway_timestamp = x_gateway_timestamp or z_gateway_timestamp
+
+    # 1) Check for required headers
+    missing = []
+    if not x_gateway_signature:
+        missing.append("X-Gateway-Signature")
+    if not x_gateway_timestamp:
+        missing.append("X-Gateway-Timestamp/Z-Gateway-Timestamp")
+    if not x_service_name:
+        missing.append("X-Service-Name")
+    if missing:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key",
+            detail=f"Missing required gateway headers: {', '.join(missing)}",
         )
+
+    # 2) Basic timestamp validation: must be an integer (nanoseconds)
+    try:
+        int(x_gateway_timestamp)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid gateway timestamp format",
+        )
+    
+
+    # 3) Optionally validate service name matches this service
+    expected_service_name = SERVICE_NAME
+    if x_service_name != expected_service_name:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Request not intended for this service",
+        )
+
+    # 4) Recompute expected signature using the exact same scheme as Go:
+    # encryptKey := fmt.Sprintf("%s:%s", config.Name, timestamp)
+    encrypt_key = f"{x_service_name}:{x_gateway_timestamp}"
+    expected_sig = hmac.new(
+        GATEWAY_SECRET_KEY.encode("utf-8"),
+        encrypt_key.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected_sig, x_gateway_signature):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid gateway signature",
+        )
+
+    # If we reach here, the request is trusted as coming via the gateway.
+    # We *could* return a context object (user_id, request_id, etc.) if needed,
+    # but since the routes currently don't accept it, we just return.
+    return
+
 
 class HealthResponse(BaseModel):
     status: str              # "ok" | "degraded" | "not_ready"
@@ -229,29 +329,88 @@ def parse_llm_recos(text: str) -> List[str]:
                 recos.append(s[idx+2:].strip())
     return recos
 
-
-# from fastapi import FastAPI, Request
-
-
-
-# app = FastAPI()
-
-
-
-@app.get("/headers")
-async def get_headers(request: Request):
-    print(request.headers)
-
-    for key, value in request.headers.items():
-        print(f"{key}: {value}")
-
-    return {"headers": dict(request.headers)}
+# @app.get("/headers")
+# async def get_headers(request: Request):
+#     return {"headers": dict(request.headers)}
 
 
 # -----------------------------
-# GET /recommendations  (AUTH + pagination)
+# DEBUG ENDPOINT: Gateway Signature Verification
 # -----------------------------
-@app.get("/recommendations", summary="Fetch recent recommendations")#, dependencies=[Depends(require_api_key)])
+# @app.post("/debug/gateway", summary="Debug and inspect gateway signature verification")
+# async def debug_gateway_signature(
+#     request: Request,
+#     x_gateway_signature: Optional[str] = Header(None, alias="x-gateway-signature"),
+#     x_gateway_timestamp: Optional[str] = Header(None, alias="x-gateway-timestamp"),
+#     z_gateway_timestamp: Optional[str] = Header(None, alias="z-gateway-timestamp"),
+#     x_request_id: Optional[str] = Header(None, alias="x-request-id"),
+#     x_service_name: Optional[str] = Header(None, alias="x-service-name"),
+#     x_user_id: Optional[str] = Header(None, alias="x-user-id"),
+# ):
+#     """
+#     Debug helper: shows exactly what headers the service received,
+#     how the expected signature was computed, and whether it matches.
+#     """
+
+#     gateway_timestamp = x_gateway_timestamp or z_gateway_timestamp
+#     missing = []
+#     if not x_gateway_signature:
+#         missing.append("x-gateway-signature")
+#     if not gateway_timestamp:
+#         missing.append("x-gateway-timestamp/z-gateway-timestamp")
+#     if not x_service_name:
+#         missing.append("x-service-name")
+
+#     if missing:
+#         return {
+#             "status": "error",
+#             "message": f"Missing required headers: {', '.join(missing)}",
+#             "received": dict(request.headers),
+#         }
+
+#     if not GATEWAY_SECRET_KEY:
+#         return {
+#             "status": "error",
+#             "message": "GATEWAY_SECRET_KEY not configured on server",
+#         }
+
+#     # Compute expected signature using the same Go logic:
+#     encrypt_key = f"{x_service_name}:{gateway_timestamp}"
+#     expected_sig = hmac.new(
+#         GATEWAY_SECRET_KEY.encode("utf-8"),
+#         encrypt_key.encode("utf-8"),
+#         hashlib.sha256,
+#     ).hexdigest()
+
+#     # Compare
+#     match = hmac.compare_digest(expected_sig, x_gateway_signature)
+
+#     return {
+#         "status": "ok" if match else "mismatch",
+#         "match": match,
+#         "received_headers": {
+#             "x-gateway-signature": x_gateway_signature,
+#             "x-gateway-timestamp": gateway_timestamp,
+#             "x-request-id": x_request_id,
+#             "x-service-name": x_service_name,
+#             "x-user-id": x_user_id,
+#         },
+#         "computed": {
+#             "encrypt_key": encrypt_key,
+#             "expected_signature": expected_sig,
+#         },
+#         "note": (
+#             "This endpoint is for debugging only. Remove or protect it "
+#             "before deploying to production."
+#         ),
+#     }
+
+
+@app.get(
+    "/recommendations",
+    summary="Fetch recent recommendations",
+    dependencies=[Depends(require_gateway_auth)],
+)
 def get_recommendations(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
@@ -273,7 +432,10 @@ def get_recommendations(
 # -----------------------------
 # POST /recommendations/analyze  (AUTH)
 # -----------------------------
-@app.post("/recommendations/analyze", summary="Analyze a single event JSON and return recommendations")#, dependencies=[Depends(require_api_key)])
+@app.post(
+        "/recommendations/analyze", 
+        summary="Analyze a single event JSON and return recommendations", 
+        dependencies=[Depends(require_gateway_auth)])
 def analyze_event(event: dict):
     """
     Accepts a single event in the contract schema:
