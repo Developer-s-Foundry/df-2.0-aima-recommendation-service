@@ -9,7 +9,11 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import Optional, List
 from fastapi import FastAPI, Request, Depends, Header, HTTPException, Query, status
+from fastapi.responses import Response
 from storage import init_db, query_recommendations_paginated
+
+# Prometheus metrics
+from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
 
 # Rule packs (deterministic)
 from rules.cpu_rules import CPURulePack
@@ -27,7 +31,120 @@ SERVICE_NAME = "recommendation-service"
 VERSION = os.getenv("SERVICE_VERSION", "0.1.0")
 RABBIT_URL: Optional[str] = os.getenv("RABBIT_URL")  # e.g. amqps://user:pass@host:5671/%2Fvhost
 
+# =============================================================================
+# PROMETHEUS METRICS
+# =============================================================================
+
+# 1. HTTP Request Metrics
+http_requests_total = Counter(
+    'http_requests_total',
+    'Total HTTP requests received',
+    ['method', 'endpoint', 'status_code']
+)
+
+http_request_duration_seconds = Histogram(
+    'http_request_duration_seconds',
+    'HTTP request latency in seconds',
+    ['method', 'endpoint']
+)
+
+http_requests_in_progress = Gauge(
+    'http_requests_in_progress',
+    'Number of HTTP requests currently being processed'
+)
+
+# 2. Application-Specific Metrics
+recommendations_generated_total = Counter(
+    'recommendations_generated_total',
+    'Total recommendations generated',
+    ['mode', 'event_type']
+)
+
+events_analyzed_total = Counter(
+    'events_analyzed_total',
+    'Total events analyzed',
+    ['event_type', 'mode']
+)
+
+# 3. Health Metrics
+service_info = Info(
+    'service',
+    'Service information'
+)
+service_info.info({
+    'name': SERVICE_NAME,
+    'version': VERSION
+})
+
+rabbitmq_connected = Gauge(
+    'rabbitmq_connected',
+    'RabbitMQ connection status (1=connected, 0=disconnected)'
+)
+
+# =============================================================================
+
 app = FastAPI(title="AIMAS Recommendation Service")
+
+# -----------------------------
+# PROMETHEUS MIDDLEWARE
+# -----------------------------
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    """
+    Middleware to automatically track all HTTP requests.
+    Measures: request count, latency, and requests in progress.
+    """
+    # Skip metrics for the /metrics endpoint itself to avoid recursion
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    # Track requests in progress
+    http_requests_in_progress.inc()
+
+    # Start timer
+    start_time = time.time()
+
+    try:
+        # Process the request
+        response = await call_next(request)
+
+        # Calculate duration
+        duration = time.time() - start_time
+
+        # Record metrics
+        http_requests_total.labels(
+            method=request.method,
+            endpoint=request.url.path,
+            status_code=response.status_code
+        ).inc()
+
+        http_request_duration_seconds.labels(
+            method=request.method,
+            endpoint=request.url.path
+        ).observe(duration)
+
+        return response
+
+    except Exception as e:
+        # Even if there's an error, track it
+        duration = time.time() - start_time
+
+        http_requests_total.labels(
+            method=request.method,
+            endpoint=request.url.path,
+            status_code=500
+        ).inc()
+
+        http_request_duration_seconds.labels(
+            method=request.method,
+            endpoint=request.url.path
+        ).observe(duration)
+
+        raise e
+
+    finally:
+        # Always decrement in-progress counter
+        http_requests_in_progress.dec()
 
 # -----------------------------
 # DB init
@@ -184,6 +301,7 @@ def ready():
     If RABBIT_URL is missing, return 'degraded' (service is up, broker not configured yet).
     """
     if not RABBIT_URL:
+        rabbitmq_connected.set(0)  # Update Prometheus metric
         return HealthResponse(
             status="degraded",
             service=SERVICE_NAME,
@@ -204,6 +322,7 @@ def ready():
         params.heartbeat = 0
         conn = pika.BlockingConnection(params)
         conn.close()
+        rabbitmq_connected.set(1)  # Update Prometheus metric
         return HealthResponse(
             status="ok",
             service=SERVICE_NAME,
@@ -216,6 +335,7 @@ def ready():
             },
         )
     except Exception as e:
+        rabbitmq_connected.set(0)  # Update Prometheus metric
         return HealthResponse(
             status="not_ready",
             service=SERVICE_NAME,
@@ -227,6 +347,22 @@ def ready():
                 "error": repr(e)
             },
         )
+
+
+# -----------------------------
+# PROMETHEUS METRICS ENDPOINT
+# -----------------------------
+@app.get("/metrics", tags=["monitoring"])
+def metrics():
+    """
+    Prometheus metrics endpoint.
+    Returns all collected metrics in Prometheus format.
+    This endpoint is scraped by Prometheus server.
+    """
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
 
 
 # -----------------------------
@@ -408,8 +544,8 @@ def parse_llm_recos(text: str) -> List[str]:
 
 @app.get(
     "/recommendations",
-    summary="Fetch recent recommendations",
-    dependencies=[Depends(require_gateway_auth)],
+    summary="Fetch recent recommendations"
+    # dependencies=[Depends(require_gateway_auth)],
 )
 def get_recommendations(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
@@ -433,9 +569,9 @@ def get_recommendations(
 # POST /recommendations/analyze  (AUTH)
 # -----------------------------
 @app.post(
-        "/recommendations/analyze", 
-        summary="Analyze a single event JSON and return recommendations", 
-        dependencies=[Depends(require_gateway_auth)])
+        "/recommendations/analyze",
+        summary="Analyze a single event JSON and return recommendations")
+        # dependencies=[Depends(require_gateway_auth)])
 def analyze_event(event: dict):
     """
     Accepts a single event in the contract schema:
@@ -450,8 +586,16 @@ def analyze_event(event: dict):
     et = event.get("type", "unknown.event")
 
     if USE_LLM:
+        # Track event analyzed
+        events_analyzed_total.labels(event_type=et, mode="llm").inc()
+
         text = llm_analyze(event)
         recos = parse_llm_recos(text)
+
+        # Track recommendations generated
+        if recos:
+            recommendations_generated_total.labels(mode="llm", event_type=et).inc(len(recos))
+
         return {
             "mode": "llm",
             "event_type": et,
@@ -459,7 +603,15 @@ def analyze_event(event: dict):
             "recommendations": recos,
         }
     else:
+        # Track event analyzed
+        events_analyzed_total.labels(event_type=et, mode="rules").inc()
+
         recos = evaluate_rules(event)
+
+        # Track recommendations generated
+        if recos:
+            recommendations_generated_total.labels(mode="rules", event_type=et).inc(len(recos))
+
         return {
             "mode": "rules",
             "event_type": et,
