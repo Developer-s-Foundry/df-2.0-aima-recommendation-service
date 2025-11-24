@@ -544,8 +544,8 @@ def parse_llm_recos(text: str) -> List[str]:
 
 @app.get(
     "/recommendations",
-    summary="Fetch recent recommendations"
-    # dependencies=[Depends(require_gateway_auth)],
+    summary="Fetch recent recommendations",
+    dependencies=[Depends(require_gateway_auth)]
 )
 def get_recommendations(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
@@ -570,8 +570,8 @@ def get_recommendations(
 # -----------------------------
 @app.post(
         "/recommendations/analyze",
-        summary="Analyze a single event JSON and return recommendations")
-        # dependencies=[Depends(require_gateway_auth)])
+        summary="Analyze a single event JSON and return recommendations",
+        dependencies=[Depends(require_gateway_auth)])
 def analyze_event(event: dict):
     """
     Accepts a single event in the contract schema:
