@@ -1,0 +1,294 @@
+[
+  {
+    "project_id": "proj-001",
+    "type": "system.cpu",
+    "timestamp": "2025-11-23T12:00:00Z",
+    "resource": "host-42",
+    "labels": {"os": "windows", "hostname": "host-42"},
+    "metrics": {"usage_pct": 88.7}
+  },
+
+  {
+    "project_id": "proj-002",
+    "type": "system.cpu",
+    "timestamp": "2025-11-23T12:01:00Z",
+    "resource": "host-17",
+    "labels": {"os": "linux", "hostname": "host-17"},
+    "metrics": {"usage_pct": 3.4}
+  },
+
+  {
+    "project_id": "proj-001",
+    "type": "system.memory",
+    "timestamp": "2025-11-23T12:02:00Z",
+    "resource": "host-42",
+    "labels": {"os": "windows"},
+    "metrics": {"total_gb": 16, "free_gb": 1.2, "used_pct": 92.5}
+  },
+
+  {
+    "project_id": "proj-003",
+    "type": "system.disk",
+    "timestamp": "2025-11-23T12:03:00Z",
+    "resource": "host-99",
+    "labels": {"os": "linux", "volume": "/"},
+    "metrics": {"total_gb": 100, "free_gb": 4.1, "used_pct": 95.9}
+  },
+
+  {
+    "project_id": "proj-004",
+    "type": "system.net",
+    "timestamp": "2025-11-23T12:04:00Z",
+    "resource": "host-wifi-1",
+    "labels": {"interface": "Wi-Fi", "os": "windows"},
+    "metrics": {"tx_bytes_per_sec": 1200000, "rx_bytes_per_sec": 400000, "errors": 0, "dropped": 0}
+  },
+
+  {
+    "project_id": "proj-005",
+    "type": "api.payment",
+    "timestamp": "2025-11-23T12:05:00Z",
+    "resource": "payments-service",
+    "labels": {"env": "prod", "region": "eu-west-1"},
+    "metrics": {"p50_ms": 120, "p95_ms": 780, "error_rate_pct": 3.2, "qps": 42}
+  },
+
+  {
+    "project_id": "proj-006",
+    "type": "service.error_rate",
+    "timestamp": "2025-11-23T12:06:00Z",
+    "resource": "orders-service",
+    "labels": {"env": "prod", "team": "orders"},
+    "metrics": {"error_rate_pct": 7.4, "qps": 120}
+  },
+
+  {
+    "project_id": "proj-007",
+    "type": "net.http",
+    "timestamp": "2025-11-23T12:07:00Z",
+    "resource": "api-gateway",
+    "labels": {"env": "prod", "gateway": "frontdoor"},
+    "metrics": {"p95_ms": 640, "5xx_rate_pct": 1.2, "throughput_rps": 180}
+  },
+
+  {
+    "project_id": "proj-008",
+    "type": "service.recommendations",
+    "timestamp": "2025-11-23T12:08:00Z",
+    "resource": "recommendation-service",
+    "labels": {"version": "1.0.2", "env": "staging"},
+    "metrics": {"http_request_count": 412, "recommendations_generated_total": 151, "avg_latency_ms": 38}
+  },
+
+  {
+    "project_id": "proj-009",
+    "type": "iot.device",
+    "timestamp": "2025-11-23T12:09:00Z",
+    "resource": "sensor-77",
+    "labels": {"location": "warehouse-3", "device_type": "temperature-sensor"},
+    "metrics": {"temp_c": 78.3, "battery_pct": 12.5, "last_seen_seconds": 30}
+  },
+
+  {
+    "project_id": "proj-010",
+    "type": "api.payment",
+    "timestamp": "2025-11-23T12:10:00Z",
+    "resource": "payments-service",
+    "labels": {"env": "prod", "region": "us-east-1"},
+    "metrics": {"p50_ms": 95, "p95_ms": 420, "error_rate_pct": 0.5, "qps": 210}
+  },
+
+  {
+    "project_id": "proj-011",
+    "type": "service.error_rate",
+    "timestamp": "2025-11-23T12:11:00Z",
+    "resource": "auth-service",
+    "labels": {"env": "prod", "team": "auth"},
+    "metrics": {"error_rate_pct": 15.2, "request_count": 3000}
+  },
+
+  {
+    "project_id": "proj-012",
+    "type": "system.disk",
+    "timestamp": "2025-11-23T12:12:00Z",
+    "resource": "host-17",
+    "labels": {"os": "linux", "volume": "/var/log"},
+    "metrics": {"total_gb": 50, "free_gb": 30, "used_pct": 40}
+  },
+
+  {
+    "project_id": "proj-013",
+    "type": "system.cpu",
+    "timestamp": "2025-11-23T12:13:00Z",
+    "resource": "host-42",
+    "labels": {"os": "windows"},
+    "metrics": {"usage_pct": 52.1}
+  },
+
+  {
+    "project_id": "proj-014",
+    "type": "service.custom_metric",
+    "timestamp": "2025-11-23T12:14:00Z",
+    "resource": "background-worker",
+    "labels": {"env": "staging"},
+    "metrics": {"jobs_in_queue": 870, "failed_jobs_last_5m": 12}
+  },
+
+  {
+    "project_id": "proj-015",
+    "type": "raw.unstructured",
+    "timestamp": "2025-11-23T12:15:00Z",
+    "resource": "legacy-producer",
+    "labels": {},
+    "metrics": {},
+    "raw": "ERROR || 2025-11-23 12:15:00 || Service crashed with exit code 137"
+  },
+  {
+    "project_id": "proj-015",
+    "type": "system.cpu",
+    "timestamp": "2025-11-23T12:00:00Z",
+    "resource": "host-42",
+    "labels": {"os": "windows", "hostname": "host-42"},
+    "metrics": {"usage_pct": 88.7}
+  },
+
+  {
+    "project_id": "proj-016",
+    "type": "system.cpu",
+    "timestamp": "2025-11-23T12:01:00Z",
+    "resource": "host-17",
+    "labels": {"os": "linux", "hostname": "host-17"},
+    "metrics": {"usage_pct": 3.4}
+  },
+
+  {
+    "project_id": "proj-017",
+    "type": "system.memory",
+    "timestamp": "2025-11-23T12:02:00Z",
+    "resource": "host-42",
+    "labels": {"os": "windows"},
+    "metrics": {"total_gb": 16, "free_gb": 1.2, "used_pct": 92.5}
+  },
+
+  {
+    "project_id": "proj-018",
+    "type": "system.disk",
+    "timestamp": "2025-11-23T12:03:00Z",
+    "resource": "host-99",
+    "labels": {"os": "linux", "volume": "/"},
+    "metrics": {"total_gb": 100, "free_gb": 4.1, "used_pct": 95.9}
+  },
+
+  {
+    "project_id": "proj-019",
+    "type": "system.net",
+    "timestamp": "2025-11-23T12:04:00Z",
+    "resource": "host-wifi-1",
+    "labels": {"interface": "Wi-Fi", "os": "windows"},
+    "metrics": {"tx_bytes_per_sec": 1200000, "rx_bytes_per_sec": 400000, "errors": 0, "dropped": 0}
+  },
+
+  {
+    "project_id": "proj-020",
+    "type": "api.payment",
+    "timestamp": "2025-11-23T12:05:00Z",
+    "resource": "payments-service",
+    "labels": {"env": "prod", "region": "eu-west-1"},
+    "metrics": {"p50_ms": 120, "p95_ms": 780, "error_rate_pct": 3.2, "qps": 42}
+  },
+
+  {
+    "project_id": "proj-021",
+    "type": "service.error_rate",
+    "timestamp": "2025-11-23T12:06:00Z",
+    "resource": "orders-service",
+    "labels": {"env": "prod", "team": "orders"},
+    "metrics": {"error_rate_pct": 7.4, "qps": 120}
+  },
+
+  {
+    "project_id": "proj-022",
+    "type": "net.http",
+    "timestamp": "2025-11-23T12:07:00Z",
+    "resource": "api-gateway",
+    "labels": {"env": "prod", "gateway": "frontdoor"},
+    "metrics": {"p95_ms": 640, "5xx_rate_pct": 1.2, "throughput_rps": 180}
+  },
+
+  {
+    "project_id": "proj-023",
+    "type": "service.recommendations",
+    "timestamp": "2025-11-23T12:08:00Z",
+    "resource": "recommendation-service",
+    "labels": {"version": "1.0.2", "env": "staging"},
+    "metrics": {"http_request_count": 412, "recommendations_generated_total": 151, "avg_latency_ms": 38}
+  },
+
+  {
+    "project_id": "proj-024",
+    "type": "iot.device",
+    "timestamp": "2025-11-23T12:09:00Z",
+    "resource": "sensor-77",
+    "labels": {"location": "warehouse-3", "device_type": "temperature-sensor"},
+    "metrics": {"temp_c": 78.3, "battery_pct": 12.5, "last_seen_seconds": 30}
+  },
+
+  {
+    "project_id": "proj-025",
+    "type": "api.payment",
+    "timestamp": "2025-11-23T12:10:00Z",
+    "resource": "payments-service",
+    "labels": {"env": "prod", "region": "us-east-1"},
+    "metrics": {"p50_ms": 95, "p95_ms": 420, "error_rate_pct": 0.5, "qps": 210}
+  },
+
+  {
+    "project_id": "proj-026",
+    "type": "service.error_rate",
+    "timestamp": "2025-11-23T12:11:00Z",
+    "resource": "auth-service",
+    "labels": {"env": "prod", "team": "auth"},
+    "metrics": {"error_rate_pct": 15.2, "request_count": 3000}
+  },
+
+  {
+    "project_id": "proj-027",
+    "type": "system.disk",
+    "timestamp": "2025-11-23T12:12:00Z",
+    "resource": "host-17",
+    "labels": {"os": "linux", "volume": "/var/log"},
+    "metrics": {"total_gb": 50, "free_gb": 30, "used_pct": 40}
+  },
+
+  {
+    "project_id": "proj-028",
+    "type": "system.cpu",
+    "timestamp": "2025-11-23T12:13:00Z",
+    "resource": "host-42",
+    "labels": {"os": "windows"},
+    "metrics": {"usage_pct": 52.1}
+  },
+
+  {
+    "project_id": "proj-029",
+    "type": "service.custom_metric",
+    "timestamp": "2025-11-23T12:14:00Z",
+    "resource": "background-worker",
+    "labels": {"env": "staging"},
+    "metrics": {"jobs_in_queue": 870, "failed_jobs_last_5m": 12}
+  },
+
+  {
+    "project_id": "proj-030",
+    "type": "raw.unstructured",
+    "timestamp": "2025-11-23T12:15:00Z",
+    "resource": "legacy-producer",
+    "labels": {},
+    "metrics": {},
+    "raw": "ERROR || 2025-11-23 12:15:00 || Service crashed with exit code 137"
+  }
+
+]
+
+
+
