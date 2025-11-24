@@ -29,7 +29,7 @@ load_dotenv()
 
 SERVICE_NAME = "recommendation-service"
 VERSION = os.getenv("SERVICE_VERSION", "0.1.0")
-RABBIT_URL: Optional[str] = os.getenv("RABBIT_URL")  # e.g. amqps://user:pass@host:5671/%2Fvhost
+RABBIT_URL: Optional[str] = os.getenv("RABBIT_URL")
 
 # =============================================================================
 # PROMETHEUS METRICS
