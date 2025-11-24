@@ -11,3 +11,4 @@ test_event_publisher.py
 test_rabbit_connection.py
 prometheus_windows_setup.md
 data/*.db
+data/recommendations.db
