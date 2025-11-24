@@ -13,3 +13,5 @@ prometheus_windows_setup.md
 data/*.db
 data/recommendations.db
 .env
+.env
+data/recommendations.db
