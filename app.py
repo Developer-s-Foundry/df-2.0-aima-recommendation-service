@@ -29,7 +29,7 @@ load_dotenv()
 
 SERVICE_NAME = "recommendation-service"
 VERSION = os.getenv("SERVICE_VERSION", "0.1.0")
-RABBIT_URL: Optional[str] = os.getenv("RABBIT_URL")  # e.g. amqps://user:pass@host:5671/%2Fvhost
+RABBIT_URL: Optional[str] = os.getenv("RABBIT_URL")
 
 # =============================================================================
 # PROMETHEUS METRICS
@@ -544,8 +544,8 @@ def parse_llm_recos(text: str) -> List[str]:
 
 @app.get(
     "/recommendations",
-    summary="Fetch recent recommendations"
-    # dependencies=[Depends(require_gateway_auth)],
+    summary="Fetch recent recommendations",
+    dependencies=[Depends(require_gateway_auth)]
 )
 def get_recommendations(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
@@ -570,8 +570,8 @@ def get_recommendations(
 # -----------------------------
 @app.post(
         "/recommendations/analyze",
-        summary="Analyze a single event JSON and return recommendations")
-        # dependencies=[Depends(require_gateway_auth)])
+        summary="Analyze a single event JSON and return recommendations",
+        dependencies=[Depends(require_gateway_auth)])
 def analyze_event(event: dict):
     """
     Accepts a single event in the contract schema:
