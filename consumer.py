@@ -234,6 +234,10 @@ def process_message(ch, method, properties, body):
         ts = msg.get("timestamp", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
         et = msg.get("type", "unknown.event")
 
+        # Extract user_id and project_id from the incoming message
+        user_id = msg.get("user_id")
+        project_id = msg.get("project_id")
+
         if USE_LLM:
             # LLM path
             reco_text = llm_recommendations_text(msg)
@@ -243,6 +247,8 @@ def process_message(ch, method, properties, body):
                 "timestamp": ts,
                 "source": "recommendation-service-llm",
                 "event_type": et,
+                "user_id": user_id,
+                "project_id": project_id,
                 "input": msg,
                 "llm_model": OPENAI_MODEL,
                 "recommendations_text": reco_text,
@@ -251,7 +257,7 @@ def process_message(ch, method, properties, body):
 
             publish_recommendation(payload)
             store_recommendation(payload)
-            print(f"\n🧠 [{et}] → LLM recommendations published.")
+            print(f"\n🧠 [{et}] [user:{user_id}] [proj:{project_id}] → LLM recommendations published.")
             print(reco_text or "(empty LLM response)")
         else:
             # Deterministic rule path
@@ -261,13 +267,15 @@ def process_message(ch, method, properties, body):
                 "timestamp": ts,
                 "source": "recommendation-service",
                 "event_type": et,
+                "user_id": user_id,
+                "project_id": project_id,
                 "input_metrics": msg.get("metrics", {}),
                 "recommendations": recos,
             }
 
             publish_recommendation(payload)
             store_recommendation(payload)
-            print(f"\n🕒 {ts} | processed event [{et}] → {len(recos)} recommendation(s):")
+            print(f"\n🕒 {ts} | [user:{user_id}] [proj:{project_id}] processed event [{et}] → {len(recos)} recommendation(s):")
             for r in recos:
                 print("   →", r)
 

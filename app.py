@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from fastapi import FastAPI, Request, Depends, Header, HTTPException, Query, status
 from fastapi.responses import Response
-from storage import init_db, query_recommendations_paginated
+from storage import init_db, query_recommendations_paginated, get_user_projects
 
 # Prometheus metrics
 from prometheus_client import Counter, Histogram, Gauge, Info, generate_latest, CONTENT_TYPE_LATEST
@@ -263,9 +263,8 @@ async def require_gateway_auth(
         )
 
     # If we reach here, the request is trusted as coming via the gateway.
-    # We *could* return a context object (user_id, request_id, etc.) if needed,
-    # but since the routes currently don't accept it, we just return.
-    return
+    # Return the user_id so endpoints can use it for filtering
+    return {"user_id": x_user_id, "request_id": x_request_id}
 
 
 class HealthResponse(BaseModel):
@@ -545,16 +544,31 @@ def parse_llm_recos(text: str) -> List[str]:
 @app.get(
     "/recommendations",
     summary="Fetch recent recommendations",
-    dependencies=[Depends(require_gateway_auth)]
 )
 def get_recommendations(
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
     since: Optional[str] = Query(None, description="ISO timestamp filter (optional)"),
     event_type: Optional[str] = Query(None, description="Filter by event type, e.g., system.cpu"),
+    project_id: Optional[str] = Query(None, description="Filter by project ID"),
+    auth_context: dict = Depends(require_gateway_auth),
 ):
+    """
+    Fetch recommendations for the authenticated user.
+    Users can only see recommendations that belong to them.
+    Optionally filter by project_id to see recommendations for a specific project.
+    """
+    # Extract user_id from the auth context (provided by gateway)
+    user_id = auth_context.get("user_id")
+
+    # Query recommendations filtered by user_id and optionally project_id
     items, total = query_recommendations_paginated(
-        page=page, page_size=page_size, since=since, event_type=event_type
+        page=page,
+        page_size=page_size,
+        since=since,
+        event_type=event_type,
+        user_id=user_id,
+        project_id=project_id
     )
     pages = (total + page_size - 1) // page_size if page_size else 1
     return {
@@ -563,7 +577,36 @@ def get_recommendations(
         "total": total,
         "pages": pages,
         "items": items,
+        "user_id": user_id,  # Include in response so user knows which user's data they're seeing
+        "project_id": project_id,
     }
+
+
+@app.get(
+    "/recommendations/projects",
+    summary="Get all projects with recommendations for the authenticated user",
+)
+def get_user_projects_endpoint(
+    auth_context: dict = Depends(require_gateway_auth),
+):
+    """
+    Returns a list of all projects that have recommendations for the authenticated user.
+    Each project includes:
+    - project_id: The project identifier
+    - recommendation_count: Number of recommendations for this project
+    - latest_timestamp: Timestamp of the most recent recommendation
+
+    This is useful for showing a user which projects they can view recommendations for.
+    """
+    user_id = auth_context.get("user_id")
+    projects = get_user_projects(user_id=user_id)
+
+    return {
+        "user_id": user_id,
+        "project_count": len(projects),
+        "projects": projects,
+    }
+
 
 # -----------------------------
 # POST /recommendations/analyze  (AUTH)

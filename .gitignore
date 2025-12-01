@@ -4,7 +4,7 @@ __pycache__
 alembic
 app
 alembic.ini
-log_producer.py 
+log_producer.py
 prometheus_client.py
 scheduler.py
 test_event_publisher.py
@@ -13,5 +13,10 @@ prometheus_windows_setup.md
 data/*.db
 data/recommendations.db
 .env
-.env
-data/recommendations.db
+
+# Test files
+test_user_filtering.py
+test_api_simple.py
+test_api_endpoints.sh
+TESTING_GUIDE.md
+POSTMAN_TESTING.md
