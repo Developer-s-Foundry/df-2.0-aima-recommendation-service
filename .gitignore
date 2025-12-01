@@ -15,8 +15,8 @@ data/recommendations.db
 .env
 
 # Test files
-test_user_filtering.py
-test_api_simple.py
-test_api_endpoints.sh
-TESTING_GUIDE.md
-POSTMAN_TESTING.md
+# test_user_filtering.py
+# test_api_simple.py
+# test_api_endpoints.sh
+# TESTING_GUIDE.md
+# POSTMAN_TESTING.md
